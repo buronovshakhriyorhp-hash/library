@@ -1,0 +1,332 @@
+// ============================================================
+// Ziyo Chashmasi — Prisma Schema
+// DB: PostgreSQL | ORM: Prisma v5
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING    // Kutilmoqda
+  PAID       // To'langan
+  PROCESSING // Tayyorlanmoqda
+  SHIPPED    // Yo'lda
+  DELIVERED  // Yetkazildi
+  CANCELLED  // Bekor qilindi
+}
+
+enum PaymentMethod {
+  CASH  // Naqd pul
+  CLICK // Click.uz
+  PAYME // Payme
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+enum NewsStatus {
+  DRAFT
+  PUBLISHED
+}
+
+// ============================================================
+// USER MODEL
+// ============================================================
+
+model User {
+  id           Int       @id @default(autoincrement())
+  name         String
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  phone        String?
+  role         Role      @default(USER)
+  isActive     Boolean   @default(true) @map("is_active")
+  refreshToken String?   @map("refresh_token")
+
+  // Relations
+  orders       Order[]
+  reviews      Review[]
+  cartItems    CartItem[]
+
+  // Timestamps
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+// ============================================================
+// CATEGORY MODEL
+// ============================================================
+
+model Category {
+  id    Int    @id @default(autoincrement())
+  slug  String @unique
+  nameUz String @map("name_uz")
+  nameRu String @map("name_ru")
+  nameEn String @map("name_en")
+  icon  String?
+  sortOrder Int @default(0) @map("sort_order")
+
+  // Relations
+  books Book[]
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("categories")
+}
+
+// ============================================================
+// AUTHOR MODEL
+// ============================================================
+
+model Author {
+  id     Int    @id @default(autoincrement())
+  nameUz String @map("name_uz")
+  nameRu String? @map("name_ru")
+  nameEn String? @map("name_en")
+  bioUz  String? @map("bio_uz") @db.Text
+  bioRu  String? @map("bio_ru") @db.Text
+  bioEn  String? @map("bio_en") @db.Text
+  image  String?
+  isFeatured Boolean @default(false) @map("is_featured")
+
+  // Relations
+  books Book[]
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("authors")
+}
+
+// ============================================================
+// BOOK MODEL
+// ============================================================
+
+model Book {
+  id          Int      @id @default(autoincrement())
+  titleUz     String   @map("title_uz")
+  titleRu     String?  @map("title_ru")
+  titleEn     String?  @map("title_en")
+  slug        String   @unique
+  descUz      String?  @map("desc_uz") @db.Text
+  descRu      String?  @map("desc_ru") @db.Text
+  descEn      String?  @map("desc_en") @db.Text
+  isbn        String?  @unique
+  price       Int      // UZS (tiyinlarda emas, so'mda)
+  discount    Int      @default(0) // Foizda (0-100)
+  image       String?
+  pages       Int?
+  year        Int?
+  publisher   String?
+  inStock     Boolean  @default(true) @map("in_stock")
+  stockCount  Int      @default(0) @map("stock_count")
+  isFeatured  Boolean  @default(false) @map("is_featured")
+  isActive    Boolean  @default(true) @map("is_active")
+  viewCount   Int      @default(0) @map("view_count")
+
+  // Foreign keys
+  categoryId  Int?     @map("category_id")
+  authorId    Int?     @map("author_id")
+
+  // Relations
+  category    Category?  @relation(fields: [categoryId], references: [id])
+  author      Author?    @relation(fields: [authorId], references: [id])
+  orderItems  OrderItem[]
+  reviews     Review[]
+  cartItems   CartItem[]
+
+  // Timestamps
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Indexes
+  @@index([categoryId])
+  @@index([authorId])
+  @@index([isFeatured])
+  @@index([isActive])
+  @@map("books")
+}
+
+// ============================================================
+// ORDER MODEL
+// ============================================================
+
+model Order {
+  id            Int           @id @default(autoincrement())
+  orderNumber   String        @unique @default(cuid()) @map("order_number")
+  status        OrderStatus   @default(PENDING)
+  paymentMethod PaymentMethod @default(CASH) @map("payment_method")
+  paymentStatus PaymentStatus @default(PENDING) @map("payment_status")
+
+  // Delivery info
+  customerName  String  @map("customer_name")
+  phone         String
+  address       String
+  city          String
+  note          String? @db.Text
+
+  // Pricing
+  subtotal      Int     // UZS
+  deliveryFee   Int     @default(0) @map("delivery_fee")
+  discount      Int     @default(0)
+  total         Int     // subtotal - discount + deliveryFee
+
+  // Foreign key
+  userId        Int?    @map("user_id")
+
+  // Relations
+  user          User?        @relation(fields: [userId], references: [id])
+  items         OrderItem[]
+  paymentLogs   PaymentLog[]
+
+  // Timestamps
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Indexes
+  @@index([userId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@map("orders")
+}
+
+// ============================================================
+// ORDER ITEM MODEL
+// ============================================================
+
+model OrderItem {
+  id        Int   @id @default(autoincrement())
+  quantity  Int
+  price     Int   // Xarid paytidagi narx (snapshot)
+  bookId    Int   @map("book_id")
+  orderId   Int   @map("order_id")
+
+  // Relations
+  book      Book  @relation(fields: [bookId], references: [id])
+  order     Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_items")
+}
+
+// ============================================================
+// PAYMENT LOG MODEL (Click/Payme callback history)
+// ============================================================
+
+model PaymentLog {
+  id            Int           @id @default(autoincrement())
+  provider      String        // "click" | "payme"
+  transactionId String        @unique @map("transaction_id")
+  amount        Int           // UZS
+  status        PaymentStatus @default(PENDING)
+  payload       Json?         // to'liq callback JSON
+  orderId       Int           @map("order_id")
+
+  // Relations
+  order         Order @relation(fields: [orderId], references: [id])
+
+  // Timestamps
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([orderId])
+  @@map("payment_logs")
+}
+
+// ============================================================
+// REVIEW MODEL
+// ============================================================
+
+model Review {
+  id        Int    @id @default(autoincrement())
+  rating    Int    // 1-5
+  comment   String? @db.Text
+  isApproved Boolean @default(false) @map("is_approved")
+
+  // Foreign keys
+  bookId    Int @map("book_id")
+  userId    Int @map("user_id")
+
+  // Relations
+  book      Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [userId], references: [id])
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // One review per user per book
+  @@unique([bookId, userId])
+  @@map("reviews")
+}
+
+// ============================================================
+// CART ITEM MODEL (server-side cart, ixtiyoriy — frontend ham ishlatadi)
+// ============================================================
+
+model CartItem {
+  id       Int @id @default(autoincrement())
+  quantity Int @default(1)
+
+  // Foreign keys
+  userId   Int @map("user_id")
+  bookId   Int @map("book_id")
+
+  // Relations
+  user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book     Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, bookId])
+  @@map("cart_items")
+}
+
+// ============================================================
+// NEWS MODEL
+// ============================================================
+
+model News {
+  id        Int        @id @default(autoincrement())
+  slug      String     @unique
+  titleUz   String     @map("title_uz")
+  titleRu   String?    @map("title_ru")
+  titleEn   String?    @map("title_en")
+  bodyUz    String     @map("body_uz") @db.Text
+  bodyRu    String?    @map("body_ru") @db.Text
+  bodyEn    String?    @map("body_en") @db.Text
+  image     String?
+  status    NewsStatus @default(PUBLISHED)
+  viewCount Int        @default(0) @map("view_count")
+
+  // Timestamps
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("news")
+}
