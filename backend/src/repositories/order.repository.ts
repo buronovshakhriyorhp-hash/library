@@ -1,5 +1,13 @@
 import { prisma } from "../lib/prisma";
-import { OrderStatus } from "@prisma/client";
+import { OrderStatus, PaymentMethod } from "@prisma/client";
+import { OrderInput } from "../services/order.service";
+
+export interface RepositoryOrderInput extends Omit<OrderInput, 'items'> {
+  subtotal: number;
+  total: number;
+  userId?: number;
+  items: Array<{ bookId: number; quantity: number; price: number }>;
+}
 
 export class OrderRepository {
   static async validateBooks(bookIds: number[]) {
@@ -8,7 +16,7 @@ export class OrderRepository {
     });
   }
 
-  static async createOrder(data: any) {
+  static async createOrder(data: RepositoryOrderInput) {
     return prisma.$transaction(async (tx) => {
       // Ombor qoldig'ini tekshirish va kamaytirish (Stock deduction) qismi:
       for (const item of data.items) {
@@ -37,7 +45,7 @@ export class OrderRepository {
           address: data.address,
           city: data.city,
           note: data.note,
-          paymentMethod: data.paymentMethod,
+          paymentMethod: data.paymentMethod as PaymentMethod,
           subtotal: data.subtotal,
           total: data.total,
           userId: data.userId,

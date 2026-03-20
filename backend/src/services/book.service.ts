@@ -2,10 +2,28 @@ import { BookRepository } from "../repositories/book.repository";
 import { AppError } from "../middleware/error.middleware";
 import { prisma } from "../lib/prisma";
 
-export const getPaginatedBooks = async (filters: any) => {
-  const { page = 1, limit = 10, category, authorId, search, minPrice, maxPrice, sort, featured } = filters;
+import { Prisma } from "@prisma/client";
 
-  const where: any = { isActive: true };
+interface BookFilters {
+  page?: number;
+  limit?: number;
+  category?: string;
+  authorId?: number;
+  search?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  sort?: string;
+  featured?: boolean;
+}
+
+export const getPaginatedBooks = async (filters: BookFilters) => {
+  const { pageNum = 1, limitNum = 10, category, authorId, search, minPrice, maxPrice, sort, featured } = {
+    ...filters,
+    pageNum: Number(filters.page) || 1,
+    limitNum: Number(filters.limit) || 10
+  };
+
+  const where: Prisma.BookWhereInput = { isActive: true };
   if (category) {
     const cat = await prisma.category.findUnique({ where: { slug: category } });
     if (cat) where.categoryId = cat.id;
@@ -33,15 +51,15 @@ export const getPaginatedBooks = async (filters: any) => {
     { createdAt: "desc" as const };
 
   const [books, total] = await Promise.all([
-    BookRepository.findBooks(where, (page - 1) * limit, limit, orderBy),
+    BookRepository.findBooks(where, (pageNum - 1) * limitNum, limitNum, orderBy),
     BookRepository.countBooks(where)
   ]);
 
   if (books.length === 0) {
-    return { books: [], meta: { page, limit, total: 0, totalPages: 0 } };
+    return { books: [], meta: { page: pageNum, limit: limitNum, total: 0, totalPages: 0 } };
   }
 
-  // N+1 Query Optimization: barcha book IDealarini yig'ish va yagona query jo'natish
+  // N+1 Query Optimization
   const bookIds = books.map((b) => b.id);
   const statsMap = await BookRepository.getBooksStatsMap(bookIds);
 
@@ -52,7 +70,7 @@ export const getPaginatedBooks = async (filters: any) => {
 
   return {
     books: booksWithStats,
-    meta: { page, limit, total, totalPages: Math.ceil(total / limit) }
+    meta: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) }
   };
 };
 

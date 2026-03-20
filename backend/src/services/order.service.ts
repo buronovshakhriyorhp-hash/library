@@ -2,7 +2,17 @@ import { OrderRepository } from "../repositories/order.repository";
 import { AppError } from "../middleware/error.middleware";
 import { OrderStatus } from "@prisma/client";
 
-export const createOrder = async (data: any, userId?: number) => {
+export interface OrderInput {
+  customerName: string;
+  phone: string;
+  address: string;
+  city: string;
+  note?: string;
+  paymentMethod: string;
+  items: Array<{ bookId: number; quantity: number }>;
+}
+
+export const createOrder = async (data: OrderInput, userId?: number) => {
   const { customerName, phone, address, city, note, paymentMethod, items } = data;
   const bookIds = items.map((i: any) => i.bookId);
   const books = await OrderRepository.validateBooks(bookIds);
