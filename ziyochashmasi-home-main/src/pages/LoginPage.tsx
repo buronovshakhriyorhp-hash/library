@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { Eye, EyeOff } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import type { LoginCredentials } from "@/types";
 
@@ -70,7 +71,11 @@ const LoginPage = () => {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-sm font-semibold text-foreground">Parol</label>
-                  <button type="button" className="text-xs text-primary hover:underline">
+                  <button 
+                    type="button" 
+                    onClick={() => toast.info("Parolni tiklash funksiyasi tez orada ishga tushadi.")}
+                    className="text-xs text-primary hover:underline"
+                  >
                     Parolni unutdingizmi?
                   </button>
                 </div>
@@ -93,6 +98,17 @@ const LoginPage = () => {
                 {errors.password && (
                   <p className="text-xs text-destructive mt-1">{errors.password.message}</p>
                 )}
+              </div>
+
+              <div className="flex items-center gap-2 mb-2">
+                <input
+                  type="checkbox"
+                  id="remember"
+                  className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                />
+                <label htmlFor="remember" className="text-sm font-medium text-foreground cursor-pointer">
+                  Meni eslab qol
+                </label>
               </div>
 
               <button
