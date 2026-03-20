@@ -21,7 +21,16 @@ export const createOrder = async (data: OrderInput, userId?: number) => {
     throw new AppError("Bir yoki bir nechta kitob mavjud emas yoki sotuvda yo'q", 400);
   }
 
-  const bookMap = new Map(books.map((b) => [b.id, b]));
+  interface MinimalBook {
+    id: number;
+    price: number;
+    discount: number;
+    titleUz: string;
+    inStock: boolean;
+    stockCount: number;
+  }
+
+  const bookMap = new Map<number, MinimalBook>(books.map((b: any) => [b.id, b as MinimalBook]));
   let subtotal = 0;
   const orderItems = items.map((item: any) => {
     const book = bookMap.get(item.bookId)!;

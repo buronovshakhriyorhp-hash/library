@@ -83,7 +83,7 @@ export const getBookDetail = async (identifier: string | number) => {
 
   // Calculate local stats explicitly retrieved through reviews relation mapping since it's a single item
   const rating = book.reviews.length
-    ? book.reviews.reduce((s, r) => s + r.rating, 0) / book.reviews.length
+    ? book.reviews.reduce((s: number, r: any) => s + r.rating, 0) / book.reviews.length
     : 0;
 
   return { ...book, rating, reviewCount: book.reviews.length };
