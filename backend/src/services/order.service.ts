@@ -33,7 +33,8 @@ export const createOrder = async (data: OrderInput, userId?: number) => {
   const bookMap = new Map<number, MinimalBook>(books.map((b: any) => [b.id, b as MinimalBook]));
   let subtotal = 0;
   const orderItems = items.map((item: any) => {
-    const book = bookMap.get(item.bookId)!;
+    const book = bookMap.get(item.bookId) as MinimalBook;
+    if (!book) throw new AppError("Kitob topilmadi", 400);
     const price = book.discount
       ? Math.floor((book.price * (100 - book.discount)) / 100)
       : book.price;

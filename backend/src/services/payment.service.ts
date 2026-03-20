@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma";
-import crypto from "crypto";
+import * as crypto from "crypto";
 import { AppError } from "../middleware/error.middleware";
 
 export const clickPrepare = async (data: any) => {

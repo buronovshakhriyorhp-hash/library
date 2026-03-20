@@ -60,11 +60,11 @@ export const getPaginatedBooks = async (filters: BookFilters) => {
   }
 
   // N+1 Query Optimization
-  const bookIds = books.map((b) => b.id);
+  const bookIds = books.map((b: any) => (b as any).id);
   const statsMap = await BookRepository.getBooksStatsMap(bookIds);
 
-  const booksWithStats = books.map((book) => {
-    const stats = statsMap[book.id] || { rating: 0, count: 0 };
+  const booksWithStats = books.map((book: any) => {
+    const stats = statsMap[(book as any).id] || { rating: 0, count: 0 };
     return { ...book, rating: stats.rating, reviewCount: stats.count };
   });
 
